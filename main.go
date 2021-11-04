@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/smelton01/spotui/cmd"
+import "github.com/smelton01/jamz/cmd"
 
 func main() {
 	cmd.Execute()

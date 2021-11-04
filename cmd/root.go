@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/smelton01/jamz/login"
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
@@ -46,6 +47,15 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Starting Spotify......")
+		acc := login.MakeAcc()
+		acc.Auth()
+		tracks, err := acc.Client.PlayerRecentlyPlayed(acc.Ctx)
+		if err != nil {
+			panic(err)
+		}
+		for _, track := range tracks {
+			fmt.Printf("Name: %v, Artist: %v", track.Track.Name, track.Track.Artists)
+		}
 	},
 }
 

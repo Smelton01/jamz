@@ -71,3 +71,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Login Completed!")
 	ch <- client
 }
+
+func MakeAcc() *Acc {
+	return &Acc{Ctx: context.Background()}
+}
