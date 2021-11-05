@@ -31,7 +31,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+)
 
 const (
 	id     = "SPOTIFY_ID"
@@ -53,8 +55,13 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Starting Spotify......")
 		acc := login.MakeAcc()
-		acc.Auth()
-		tracks, err := acc.Client.PlayerRecentlyPlayed(acc.Ctx)
+		client, err := acc.Auth()
+		if err != nil {
+			panic(err)
+		}
+
+		// saveToken(client)
+		tracks, err := client.PlayerRecentlyPlayed(acc.Ctx)
 		if err != nil {
 			panic(err)
 		}
@@ -99,8 +106,8 @@ func initConfig() {
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	if err := viper.ReadInConfig(); err != nil {
+		panic(err)
 	}
 	os.Setenv(id, viper.GetString(id))
 	os.Setenv(secret, viper.GetString(secret))
