@@ -33,6 +33,11 @@ import (
 
 var cfgFile string
 
+const (
+	id     = "SPOTIFY_ID"
+	secret = "SPOTIFY_SECRET"
+)
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "spotui",
@@ -85,14 +90,10 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
 		// Search config in home directory with name ".spotui" (without extension).
-		viper.AddConfigPath(home)
+		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".spotui")
+		viper.SetConfigName(".credentials")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -101,4 +102,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+	os.Setenv(id, viper.GetString(id))
+	os.Setenv(secret, viper.GetString(secret))
 }

@@ -17,7 +17,6 @@ import (
 const redirectURI = "http://localhost:8080/callback"
 
 var (
-	auth  = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate))
 	ch    = make(chan *spotify.Client)
 	state = "abc123"
 )
@@ -25,11 +24,13 @@ var (
 type Acc struct {
 	Client *spotify.Client
 	Ctx    context.Context
+	auth   *spotifyauth.Authenticator
 }
 
 func (acc *Acc) Auth() {
+	acc.auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadCurrentlyPlaying, spotifyauth.ScopeUserReadPlaybackState, spotifyauth.ScopeUserModifyPlaybackState, spotifyauth.ScopeUserReadRecentlyPlayed))
 	// first start an HTTP server
-	http.HandleFunc("/callback", completeAuth)
+	http.HandleFunc("/callback", acc.completeAuth)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("Got request for:", r.URL.String())
 	})
@@ -40,7 +41,7 @@ func (acc *Acc) Auth() {
 		}
 	}()
 
-	url := auth.AuthURL(state)
+	url := acc.auth.AuthURL(state)
 	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
 
 	// wait for auth to complete
@@ -55,8 +56,8 @@ func (acc *Acc) Auth() {
 	fmt.Println("You are logged in as:", user.ID)
 }
 
-func completeAuth(w http.ResponseWriter, r *http.Request) {
-	tok, err := auth.Token(r.Context(), state, r)
+func (acc *Acc) completeAuth(w http.ResponseWriter, r *http.Request) {
+	tok, err := acc.auth.Token(r.Context(), state, r)
 	if err != nil {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
 		log.Fatal(err)
@@ -67,7 +68,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// use the token to get an authenticated client
-	client := spotify.New(auth.Client(r.Context(), tok))
+	client := spotify.New(acc.auth.Client(r.Context(), tok))
 	fmt.Fprintf(w, "Login Completed!")
 	ch <- client
 }
