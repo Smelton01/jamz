@@ -16,13 +16,18 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"log"
 
+	"github.com/charmbracelet/bubbles/list"
+	"github.com/smelton01/jamz/ui"
 	"github.com/spf13/cobra"
+	"github.com/zmb3/spotify/v2"
 )
 
 // playCmd represents the play command
-var playCmd = &cobra.Command{
+var oldCmd = &cobra.Command{
 	Use:   "play",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
@@ -32,12 +37,47 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("play called")
+		devs, err := Client.PlayerDevices(cmd.Context())
+		if err != nil {
+			panic(err)
+		}
+		log.Println(devs)
+		ch := make(chan list.Item)
+		ui.Main(devs, ch)
+		device := <-ch
+		// check device
+		var playID spotify.ID
+		log.Println("Active device")
+		for _, dev := range devs {
+			fmt.Println(dev.Name, "status", dev.Active)
+			if dev.Name == device.FilterValue() {
+				dev.Active = true
+				playID = dev.ID
+			}
+			fmt.Println(dev.Name, "status", dev.Active)
+		}
+
+		// ui.Main(devs, ch)
+		state, err := Client.PlayerState(cmd.Context())
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("device", state.Device, state.Playing, state.Timestamp)
+		rec, err := Client.PlayerRecentlyPlayed(context.Background())
+		if err != nil {
+			panic(err)
+		}
+		log.Println(rec[0].PlaybackContext.URI)
+
+		err = Client.PlayOpt(context.Background(), &spotify.PlayOptions{DeviceID: &playID})
+		if err != nil {
+			panic(err)
+		}
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(playCmd)
+	rootCmd.AddCommand(oldCmd)
 
 	// Here you will define your flags and configuration settings.
 

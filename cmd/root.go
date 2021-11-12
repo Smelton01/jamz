@@ -22,11 +22,13 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/smelton01/jamz/login"
 	"github.com/spf13/cobra"
+	"github.com/zmb3/spotify/v2"
 
 	"github.com/spf13/viper"
 )
@@ -40,18 +42,18 @@ const (
 	secret = "SPOTIFY_SECRET"
 )
 
+var Client *spotify.Client
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "spotui",
 	Short: "A Terminal based Spotify app",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+d`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
+	PersistentPreRun: nil,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Starting Spotify......")
 		acc := login.MakeAcc()
@@ -59,14 +61,28 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			panic(err)
 		}
+		Client = client
 
 		// saveToken(client)
-		tracks, err := client.PlayerRecentlyPlayed(acc.Ctx)
+		// tracks, err := client.PlayerRecentlyPlayed(acc.Ctx)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// for _, track := range tracks {
+		// 	fmt.Printf("Name: %v, Artist: %v", track.Track.Name, track.Track.Artists)
+		// }
+
+		dev, err := Client.PlayerDevices(context.Background())
 		if err != nil {
 			panic(err)
 		}
-		for _, track := range tracks {
-			fmt.Printf("Name: %v, Artist: %v", track.Track.Name, track.Track.Artists)
+		for _, d := range dev {
+			fmt.Printf("d.Name: %v  ", d.Name)
+			fmt.Printf("d.ID: %v\n", d.ID.String())
+			client.PlayOpt(cmd.Context(), &spotify.PlayOptions{
+				DeviceID: &d.ID,
+			})
+			client.Play(cmd.Context())
 		}
 	},
 }
@@ -111,4 +127,11 @@ func initConfig() {
 	}
 	os.Setenv(id, viper.GetString(id))
 	os.Setenv(secret, viper.GetString(secret))
+
+	acc := login.MakeAcc()
+	client, err := acc.Auth()
+	if err != nil {
+		panic(err)
+	}
+	Client = client
 }
