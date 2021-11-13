@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -13,25 +12,22 @@ var playCmd = &cobra.Command{
 	Use:   "play",
 	Short: "Play music",
 	Long:  `Resume playback on yoour currenlyt active device`,
-	RunE:  play,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return play(context.Background())
+	},
 }
 
-// toggle playback
-func play(cmd *cobra.Command, args []string) error {
-	state, err := Client.PlayerState(cmd.Context())
-	if err != nil {
-		return err
-	}
-	if state.Playing {
-		err := Client.Pause(cmd.Context())
+var pauseCmd = &cobra.Command{
+	Use:   "pause",
+	Short: "Pause music",
+	Long:  `Pause playback on your currently active device`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := pause(context.Background())
 		if err != nil {
 			return err
 		}
-	}
-	if err = Client.Play(cmd.Context()); err != nil {
-		return errors.New(err.Error())
-	}
-	return nil
+		return nil
+	},
 }
 
 var nextCmd = &cobra.Command{
@@ -81,8 +77,34 @@ var searchCmd = &cobra.Command{
 	},
 }
 
+// toggle playback
+func play(ctx context.Context) error {
+	// state, err := Client.PlayerState(ctx)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// if state.Device == spotify.PlayerDevice{}{
+	// 	return ErrNoActiveDevice
+	// }
+	// // if dev := state.Device; dev == spotify.PlayerDevice{} {
+	// // 	return ErrNoActiveDevice
+	// // }
+
+	if err := Client.Play(ctx); err != nil {
+		return err
+	}
+	return nil
+}
 func next(ctx context.Context) error {
 	if err := Client.Next(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func pause(ctx context.Context) error {
+	if err := Client.Pause(ctx); err != nil {
 		return err
 	}
 	return nil
@@ -107,7 +129,7 @@ func init() {
 	rootCmd.AddCommand(playCmd)
 	rootCmd.AddCommand(nextCmd)
 	rootCmd.AddCommand(searchCmd)
-	rootCmd.AddCommand(oldCmd)
 	rootCmd.AddCommand(prevCmd)
+	rootCmd.AddCommand(pauseCmd)
 
 }

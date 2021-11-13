@@ -2,4 +2,5 @@ package cmd
 
 import "errors"
 
-var ErrInvalidQuery = errors.New("Search query is not valid")
+var ErrInvalidQuery = errors.New("search query is not valid")
+var ErrNoActiveDevice = errors.New("no active device detected")

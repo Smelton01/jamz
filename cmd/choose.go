@@ -28,14 +28,9 @@ import (
 
 // playCmd represents the play command
 var oldCmd = &cobra.Command{
-	Use:   "play",
+	Use:   "old",
 	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long:  `Select device to play on`,
 	Run: func(cmd *cobra.Command, args []string) {
 		devs, err := Client.PlayerDevices(cmd.Context())
 		if err != nil {
@@ -47,7 +42,6 @@ to quickly create a Cobra application.`,
 		device := <-ch
 		// check device
 		var playID spotify.ID
-		log.Println("Active device")
 		for _, dev := range devs {
 			fmt.Println(dev.Name, "status", dev.Active)
 			if dev.Name == device.FilterValue() {
@@ -56,19 +50,6 @@ to quickly create a Cobra application.`,
 			}
 			fmt.Println(dev.Name, "status", dev.Active)
 		}
-
-		// ui.Main(devs, ch)
-		state, err := Client.PlayerState(cmd.Context())
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("device", state.Device, state.Playing, state.Timestamp)
-		rec, err := Client.PlayerRecentlyPlayed(context.Background())
-		if err != nil {
-			panic(err)
-		}
-		log.Println(rec[0].PlaybackContext.URI)
-
 		err = Client.PlayOpt(context.Background(), &spotify.PlayOptions{DeviceID: &playID})
 		if err != nil {
 			panic(err)
@@ -78,14 +59,4 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(oldCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// playCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// playCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
