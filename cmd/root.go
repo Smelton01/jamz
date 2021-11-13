@@ -54,7 +54,7 @@ d`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	PersistentPreRun: nil,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("Starting Spotify......")
 		acc := login.MakeAcc()
 		client, err := acc.Auth()
@@ -79,11 +79,17 @@ d`,
 		for _, d := range dev {
 			fmt.Printf("d.Name: %v  ", d.Name)
 			fmt.Printf("d.ID: %v\n", d.ID.String())
-			client.PlayOpt(cmd.Context(), &spotify.PlayOptions{
+			err := client.PlayOpt(cmd.Context(), &spotify.PlayOptions{
 				DeviceID: &d.ID,
 			})
-			client.Play(cmd.Context())
+			if err != nil {
+				return err
+			}
+			if err := client.Play(cmd.Context()); err != nil {
+				return err
+			}
 		}
+		return nil
 	},
 }
 
