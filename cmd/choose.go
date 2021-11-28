@@ -16,14 +16,8 @@ limitations under the License.
 package cmd
 
 import (
-	"context"
-	"fmt"
-	"log"
-
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/smelton01/jamz/ui"
 	"github.com/spf13/cobra"
-	"github.com/zmb3/spotify/v2"
 )
 
 // playCmd represents the play command
@@ -36,24 +30,24 @@ var oldCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		log.Println(devs)
-		ch := make(chan list.Item)
-		ui.Main(devs, ch)
-		device := <-ch
-		// check device
-		var playID spotify.ID
-		for _, dev := range devs {
-			fmt.Println(dev.Name, "status", dev.Active)
-			if dev.Name == device.FilterValue() {
-				dev.Active = true
-				playID = dev.ID
-			}
-			fmt.Println(dev.Name, "status", dev.Active)
-		}
-		err = Client.PlayOpt(context.Background(), &spotify.PlayOptions{DeviceID: &playID})
-		if err != nil {
-			panic(err)
-		}
+		// log.Println(devs)
+		// ch := make(chan list.Item)
+		ui.Main(devs, Client)
+		// device := <-ch
+		// // check device
+		// var playID spotify.ID
+		// for _, dev := range devs {
+		// 	fmt.Println(dev.Name, "status", dev.Active)
+		// 	if dev.Name == device.FilterValue() {
+		// 		dev.Active = true
+		// 		playID = dev.ID
+		// 	}
+		// 	fmt.Println(dev.Name, "status", dev.Active)
+		// }
+		// err = Client.PlayOpt(context.Background(), &spotify.PlayOptions{DeviceID: &playID})
+		// if err != nil {
+		// 	panic(err)
+		// }
 	},
 }
 

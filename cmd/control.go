@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	control "github.com/smelton01/jamz/controls"
 	"github.com/spf13/cobra"
 	"github.com/zmb3/spotify/v2"
 )
@@ -13,7 +14,8 @@ var playCmd = &cobra.Command{
 	Short: "Play music",
 	Long:  `Resume playback on yoour currenlyt active device`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return play(context.Background())
+		c := &control.Controller{Client: Client}
+		return c.Play(context.Background())
 	},
 }
 
@@ -22,7 +24,8 @@ var pauseCmd = &cobra.Command{
 	Short: "Pause music",
 	Long:  `Pause playback on your currently active device`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := pause(context.Background())
+		c := &control.Controller{Client: Client}
+		err := c.Pause(context.Background())
 		if err != nil {
 			return err
 		}
@@ -35,7 +38,8 @@ var nextCmd = &cobra.Command{
 	Short: "Skip to the next track",
 	Long:  `Next track`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := next(cmd.Context())
+		c := &control.Controller{Client: Client}
+		err := c.Next(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -47,7 +51,8 @@ var prevCmd = &cobra.Command{
 	Short: "Skip to the previous track",
 	Long:  `Prev track`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := prev(cmd.Context())
+		c := &control.Controller{Client: Client}
+		err := c.Prev(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -66,7 +71,8 @@ var searchCmd = &cobra.Command{
 			return ErrInvalidQuery
 		}
 		sType := spotify.SearchTypeAlbum
-		results, err := search(cmd.Context(), query, sType)
+		c := &control.Controller{Client: Client}
+		results, err := c.Search(cmd.Context(), query, sType)
 		if err != nil {
 			return err
 		}
@@ -75,54 +81,6 @@ var searchCmd = &cobra.Command{
 		_ = results
 		return nil
 	},
-}
-
-// toggle playback
-func play(ctx context.Context) error {
-	// state, err := Client.PlayerState(ctx)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// if state.Device == spotify.PlayerDevice{}{
-	// 	return ErrNoActiveDevice
-	// }
-	// // if dev := state.Device; dev == spotify.PlayerDevice{} {
-	// // 	return ErrNoActiveDevice
-	// // }
-
-	if err := Client.Play(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-func next(ctx context.Context) error {
-	if err := Client.Next(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-
-func pause(ctx context.Context) error {
-	if err := Client.Pause(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-
-func prev(ctx context.Context) error {
-	if err := Client.Previous(ctx); err != nil {
-		return err
-	}
-	return nil
-}
-
-func search(ctx context.Context, query string, t spotify.SearchType) (*spotify.SearchResult, error) {
-	res, err := Client.Search(ctx, query, t)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
 }
 
 func init() {
