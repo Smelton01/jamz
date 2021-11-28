@@ -40,7 +40,7 @@ Docker build --tag jamz .
 2. Run the container
 
 ```
-Docker run -d --name jamz
+Docker run jamz
 ```
 
 ## Usage
