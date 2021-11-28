@@ -70,3 +70,19 @@ func (c *Controller) GetDevices(ctx context.Context) ([]spotify.PlayerDevice, er
 	}
 	return devs, nil
 }
+
+func (c *Controller) PlayOpt(ctx context.Context, opt *spotify.PlayOptions) error {
+	err := c.Client.PlayOpt(ctx, opt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Controller) GetState(ctx context.Context) (*spotify.PlayerState, error) {
+	res, err := c.Client.PlayerState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
