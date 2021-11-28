@@ -54,3 +54,19 @@ func (c *Controller) Search(ctx context.Context, query string, t spotify.SearchT
 	}
 	return res, nil
 }
+
+func (c *Controller) GetPlaylists(ctx context.Context) ([]spotify.SimplePlaylist, error) {
+	res, err := c.Client.CurrentUsersPlaylists(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return res.Playlists, nil
+}
+
+func (c *Controller) getDevices(ctx context.Context) ([]spotify.PlayerDevice, error) {
+	devs, err := c.Client.PlayerDevices(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return devs, nil
+}

@@ -50,29 +50,29 @@ type model struct {
 	client    *spotify.Client
 }
 
-func Main(devs []spotify.PlayerDevice, client *spotify.Client) {
-	items := []list.Item{}
-
-	for _, dev := range devs {
-		items = append(items, item{
-			title: dev.Name, desc: dev.Type,
-		})
+func Render(devs []spotify.PlayerDevice, client *spotify.Client) {
+	generic := []interface{}{}
+	for _, d := range devs {
+		generic = append(generic, d)
 	}
-	if len(items) < 1 {
-		items = append(items, item{title: "No device detected", desc: "Please make sure your device is connected to the internet"})
-	}
+	devices := makeList(generic...)
 	playlist := []list.Item{
 		item{title: "first", desc: "etsting"},
 		item{title: "2nd", desc: "second one"}}
-	controls := []list.Item{
+	genPlaylist := []interface{}{}
+	for _, p := range playlist {
+		genPlaylist = append(genPlaylist, p)
+	}
+
+	controls := []interface{}{
 		item{title: string(playCommand), desc: "resume playback"},
 		item{title: string(pauseCommand), desc: "pause playback"},
 		item{title: string(nextCommand), desc: "next track"},
 		item{title: string(prevCommand), desc: "previous track"},
 	}
-	m := model{devices: list.NewModel(items, list.NewDefaultDelegate(), 0, 0),
-		playlist: list.NewModel(playlist, list.NewDefaultDelegate(), 0, 0),
-		controls: list.NewModel(controls, list.NewDefaultDelegate(), 0, 0),
+	m := model{devices: devices,
+		playlist: makeList(genPlaylist...),
+		controls: makeList(controls...),
 		client:   client,
 	}
 	m.devices.Title = "JAMZ select Active device"
@@ -120,8 +120,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func updateDevice(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		top, right, bottom, left := docStyle.GetMargin()
-		m.devices.SetSize(msg.Width-left-right, msg.Height-top-bottom)
+		resizeWindow(&m.devices, msg)
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			// m.dev <- list.Model{}
@@ -142,11 +141,9 @@ func updateDevice(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 func updatePlaylist(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		top, right, bottom, left := docStyle.GetMargin()
-		m.playlist.SetSize(msg.Width-left-right, msg.Height-top-bottom)
+		resizeWindow(&m.playlist, msg)
 	case tea.KeyMsg:
 		if msg.String() == "enter" {
-			// m.dev <- m.list.SelectedItem()
 			log.Println("selected playlist")
 			return m, nil
 		}
@@ -161,18 +158,15 @@ func updatePlaylist(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 func updateControl(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		top, right, bottom, left := docStyle.GetMargin()
-		m.controls.SetSize(msg.Width-left-right, msg.Height-top-bottom)
+		resizeWindow(&m.controls, msg)
 	case tea.KeyMsg:
 		if msg.String() == "enter" {
-			// m.dev <- m.list.SelectedItem()
 			err := ctl(context.Background(), m.controls.SelectedItem().FilterValue(), m)
 			if err != nil {
 				// fmt.Println(err)
 				// Show a thing if this fails maybe red color or something
 				return m, nil
 			}
-			// fmt.Println("enter")
 			return m, nil
 		}
 		var cmd tea.Cmd
@@ -185,12 +179,6 @@ func updateControl(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 
 func ctl(ctx context.Context, cmd string, m model) error {
 	c := control.Controller{Client: m.client}
-	// fmt.Println(c)
-	// err := c.Client.Play(ctx)
-	// if err != nil {
-	// 	fmt.Println("got errsssssssssssssssssssssssssssssssssssssssor", err)
-	// 	return err
-	// }
 	switch command(cmd) {
 	case playCommand:
 		return c.Play(ctx)
@@ -216,4 +204,27 @@ func (m model) View() string {
 		view = m.controls.View()
 	}
 	return docStyle.Render(view)
+}
+func makeList(items ...interface{}) list.Model {
+	output := []list.Item{}
+	for _, elem := range items {
+		switch elemType := elem.(type) {
+		case spotify.PlayerDevice:
+			output = append(output, item{title: elemType.Name, desc: elemType.Type})
+			if len(output) < 1 {
+				output = append(output, item{title: "No device detected", desc: "Please make sure your device is connected to the internet"})
+			}
+		case item:
+			output = append(output, item{title: elemType.title, desc: elemType.desc})
+		case spotify.SimplePlaylist:
+			output = append(output, item{title: elemType.Name, desc: elemType.Owner.DisplayName})
+		}
+
+	}
+	return list.NewModel(output, list.NewDefaultDelegate(), 0, 0)
+}
+
+func resizeWindow(list *list.Model, msg tea.WindowSizeMsg) {
+	top, right, bottom, left := docStyle.GetMargin()
+	list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
 }
