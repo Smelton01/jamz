@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -43,15 +42,23 @@ func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
 
 type model struct {
-	devices   list.Model
-	playlist  list.Model
-	controls  list.Model
-	curWindow window
-	client    *spotify.Client
+	devices    list.Model
+	playlist   list.Model
+	controls   list.Model
+	curWindow  window
+	client     *spotify.Client
+	controller control.Controller
 }
 
-func Render(devs []spotify.PlayerDevice, client *spotify.Client) {
+func Render(client *spotify.Client) error {
+
+	model := model{controller: control.Controller{Client: client}}
+
 	generic := []interface{}{}
+	devs, err := model.controller.GetDevices(context.Background())
+	if err != nil {
+		return err
+	}
 	for _, d := range devs {
 		generic = append(generic, d)
 	}
@@ -70,23 +77,22 @@ func Render(devs []spotify.PlayerDevice, client *spotify.Client) {
 		item{title: string(nextCommand), desc: "next track"},
 		item{title: string(prevCommand), desc: "previous track"},
 	}
-	m := model{devices: devices,
-		playlist: makeList(genPlaylist...),
-		controls: makeList(controls...),
-		client:   client,
-	}
-	m.devices.Title = "JAMZ select Active device"
-	m.playlist.Title = "Playlists"
-	m.controls.Title = "Playback controls"
 
-	p := tea.NewProgram(m)
+	model.devices = devices
+	model.playlist = makeList(genPlaylist...)
+	model.controls = makeList(controls...)
+	model.devices.Title = "JAMZ select Active device"
+	model.playlist.Title = "Playlists"
+	model.controls.Title = "Playback controls"
+
+	p := tea.NewProgram(model)
 	p.EnterAltScreen()
 
 	if err := p.Start(); err != nil {
 		fmt.Println("Error running program:", err)
-		os.Exit(1)
+		return err
 	}
-	log.Println()
+	return nil
 }
 func (m model) Init() tea.Cmd {
 	return nil

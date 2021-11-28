@@ -1,13 +1,20 @@
+/*
+Copyright © 2021 Simon Juba
+*/
 package cmd
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	control "github.com/smelton01/jamz/controls"
 	"github.com/spf13/cobra"
 	"github.com/zmb3/spotify/v2"
 )
+
+var ErrInvalidQuery = errors.New("search query is not valid")
+var ErrNoActiveDevice = errors.New("no active device detected")
 
 var playCmd = &cobra.Command{
 	Use:   "play",

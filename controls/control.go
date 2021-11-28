@@ -63,7 +63,7 @@ func (c *Controller) GetPlaylists(ctx context.Context) ([]spotify.SimplePlaylist
 	return res.Playlists, nil
 }
 
-func (c *Controller) getDevices(ctx context.Context) ([]spotify.PlayerDevice, error) {
+func (c *Controller) GetDevices(ctx context.Context) ([]spotify.PlayerDevice, error) {
 	devs, err := c.Client.PlayerDevices(ctx)
 	if err != nil {
 		return nil, err
