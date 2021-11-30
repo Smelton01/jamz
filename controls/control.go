@@ -63,6 +63,14 @@ func (c *Controller) GetPlaylists(ctx context.Context) ([]spotify.SimplePlaylist
 	return res.Playlists, nil
 }
 
+func (c *Controller) GetPlaylistTracks(ctx context.Context, ID spotify.ID) ([]spotify.PlaylistTrack, error) {
+	res, err := c.Client.GetPlaylistTracks(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	return res.Tracks, nil
+}
+
 func (c *Controller) GetDevices(ctx context.Context) ([]spotify.PlayerDevice, error) {
 	devs, err := c.Client.PlayerDevices(ctx)
 	if err != nil {

@@ -33,12 +33,17 @@ const (
 )
 
 type item struct {
+	list.Item
 	title, desc string
+	object      interface{}
 }
+
+// TODO use objects or pointers to be able to keeep your objects co interfaces!!!!! :)
 
 func (i item) Title() string       { return i.title }
 func (i item) Description() string { return i.desc }
 func (i item) FilterValue() string { return i.title }
+func (i item) Object() interface{} { return i.object }
 
 type model struct {
 	devices     list.Model
@@ -159,24 +164,53 @@ func updatePlaylist(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		resizeWindow(&m.playlist, msg)
 	case tea.KeyMsg:
-		if len(m.playlistNav) == 1 {
-			if msg.String() == "enter" {
+		// if len(m.playlistNav) == 1 {
+		if msg.String() == "enter" {
+			// fmt.Println("doing something")
+			// time.Sleep(10 * time.Second)
+			// fmt.Println("finishing")
+			if len(m.playlistNav) == 1 {
 				playlist, err := m.controller.GetPlaylists(context.Background())
 				if err != nil {
 					panic(err)
 				}
 				for _, p := range playlist {
 					if p.Name == m.playlist.SelectedItem().FilterValue() {
-						// gen := []interface{}{}
-						// for _, track := range p.Tracks {
-						// 	gen = append(gen, track)
-						// }
+						tracks, err := m.controller.GetPlaylistTracks(m.ctx, p.ID)
+						if err != nil {
+							panic(err)
+						}
+						gen := []interface{}{}
+						for _, track := range tracks {
+							gen = append(gen, track)
+						}
+						m.playlistNav = append(m.playlistNav, makeList(gen...))
+						m.playlist = m.playlistNav[len(m.playlistNav)-1]
+						// fmt.Println(gen)
+
 					}
 				}
-				return m, nil
+
+			} else if len(m.playlistNav) == 2 {
+				fmt.Println("Playing.... ", m.playlist.SelectedItem().FilterValue())
+
+				res, _ := m.controller.Search(m.ctx, m.playlist.SelectedItem().FilterValue(), spotify.SearchTypeTrack)
+				track := res.Tracks.Tracks[0]
+				err := m.controller.PlayOpt(m.ctx, &spotify.PlayOptions{URIs: []spotify.URI{track.URI}})
+				if err != nil {
+					fmt.Println(err)
+				}
 			}
+			// return m, nil
+		}
+		if msg.String() == "delete" {
+			m.playlistNav[len(m.playlistNav)-1] = list.Model{}
+			m.playlistNav = m.playlistNav[:len(m.playlistNav)-1]
+			m.playlist = m.playlistNav[len(m.playlistNav)-1]
 
 		}
+
+		// }
 		var cmd tea.Cmd
 		m.playlist, cmd = m.playlist.Update(msg)
 
@@ -257,6 +291,14 @@ func makeList(items ...interface{}) list.Model {
 			output = append(output, item{title: elemType.title, desc: elemType.desc})
 		case spotify.SimplePlaylist:
 			output = append(output, item{title: elemType.Name, desc: elemType.Owner.DisplayName})
+		case spotify.PlaylistTrack:
+			output = append(output, item{object: elemType.Track, title: elemType.Track.Name, desc: func(artists []spotify.SimpleArtist) string {
+				var arts string
+				for _, artist := range artists {
+					arts += artist.Name + " "
+				}
+				return arts
+			}(elemType.Track.Artists)})
 		}
 
 	}
