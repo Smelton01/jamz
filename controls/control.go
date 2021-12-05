@@ -56,10 +56,11 @@ func (c *Controller) Search(ctx context.Context, query string, t spotify.SearchT
 }
 
 func (c *Controller) GetPlaylists(ctx context.Context) ([]spotify.SimplePlaylist, error) {
-	res, err := c.Client.CurrentUsersPlaylists(ctx)
+	res, err := c.Client.CurrentUsersPlaylists(ctx, spotify.Limit(10))
 	if err != nil {
 		return nil, err
 	}
+	// spotify.RequestOption{}
 	return res.Playlists, nil
 }
 
@@ -94,3 +95,5 @@ func (c *Controller) GetState(ctx context.Context) (*spotify.PlayerState, error)
 	}
 	return res, nil
 }
+
+// func (c *Controller) GetCurrentTrack

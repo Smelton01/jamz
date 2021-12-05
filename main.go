@@ -21,12 +21,11 @@ THE SOFTWARE.
 */
 package main
 
-import (
-	"github.com/smelton01/jamz/cmd"
-)
+import "github.com/smelton01/jamz/cmd"
 
 func main() {
 	cmd.Execute()
+	// ui.Start()
 }
 
 // package main

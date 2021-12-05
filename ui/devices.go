@@ -25,6 +25,8 @@ const (
 	recommendedWindow
 )
 
+const numWindow = 4
+
 const (
 	playCommand  command = "play"
 	pauseCommand command = "pause"
@@ -53,7 +55,10 @@ type model struct {
 	controller  control.Controller
 	ctx         context.Context
 	playlistNav []list.Model
+	nowPlaying  spotify.FullTrack
 }
+
+// TODO add tick command for now playing
 
 func Render(client *spotify.Client) error {
 
@@ -61,6 +66,7 @@ func Render(client *spotify.Client) error {
 	model.devices.Title = "JAMZ select Active device"
 	model.playlist.Title = "Playlists"
 	model.controls.Title = "Playback controls"
+	model.initWindows()
 
 	p := tea.NewProgram(model)
 	p.EnterAltScreen()
@@ -75,13 +81,61 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
+func (m *model) initWindows() {
+	// init playlists page
+	playlist, err := m.controller.GetPlaylists(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	genPlaylist := []interface{}{}
+	for _, p := range playlist {
+		genPlaylist = append(genPlaylist, p)
+	}
+	m.playlistNav = append(m.playlistNav, makeList(genPlaylist...))
+	m.playlist = m.playlistNav[len(m.playlistNav)-1]
+	m.playlist.Title = "Your playlists"
+
+	// init controls page
+	controls := []interface{}{
+		item{title: string(playCommand), desc: "resume playback"},
+		item{title: string(pauseCommand), desc: "pause playback"},
+		item{title: string(nextCommand), desc: "next track"},
+		item{title: string(prevCommand), desc: "previous track"},
+	}
+	m.controls = makeList(controls...)
+	m.controls.Title = "Playback control"
+
+	// init devices page
+	generic := []interface{}{}
+	devs, err := m.controller.GetDevices(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	for _, d := range devs {
+		generic = append(generic, d)
+	}
+	m.devices = makeList(generic...)
+	m.devices.Title = "Select device to play from"
+
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		resizeWindow(msg, &m.devices, &m.controls, &m.playlist)
 	case tea.KeyMsg:
 		if msgStr := msg.String(); msgStr == "ctrl+c" || msgStr == "q" {
-			return nil, tea.Quit
+			return m, tea.Quit
 		} else if msg.String() == "1" {
-			m.curWindow = (m.curWindow + 1) % 3
+			m.curWindow = (m.curWindow + 1) % numWindow
+			// m.nowPlaying =
+			res, err := m.controller.GetState(m.ctx)
+			if err != nil {
+				panic(err)
+			}
+			if res.CurrentlyPlaying.Item != nil {
+				m.nowPlaying = *res.CurrentlyPlaying.Item
+			}
 			// m.controls.SetSize(m.devices.Width(), m.devices.Height())
 			// m.playlist.SetSize(m.devices.Width(), m.devices.Height())
 		}
@@ -95,26 +149,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		mod, cmd = updatePlaylist(msg, m)
 	case controlWindow:
 		mod, cmd = updateControl(msg, m)
+	case nowPlayingWindow:
+		mod, cmd = m, cmd
 	}
 
 	return mod, cmd
 }
 
 func updateDevice(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
-	if len(m.devices.Items()) == 0 {
-		generic := []interface{}{}
-		devs, err := m.controller.GetDevices(context.Background())
-		if err != nil {
-			panic(err)
-		}
-		for _, d := range devs {
-			generic = append(generic, d)
-		}
-		m.devices = makeList(generic...)
-	}
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		resizeWindow(&m.devices, msg)
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return m, nil
@@ -148,27 +191,9 @@ func updateDevice(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 }
 
 func updatePlaylist(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
-	if len(m.controls.Items()) == 0 {
-		playlist, err := m.controller.GetPlaylists(context.Background())
-		if err != nil {
-			panic(err)
-		}
-		genPlaylist := []interface{}{}
-		for _, p := range playlist {
-			genPlaylist = append(genPlaylist, p)
-		}
-		m.playlistNav = append(m.playlistNav, makeList(genPlaylist...))
-		m.playlist = m.playlistNav[len(m.playlistNav)-1]
-	}
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		resizeWindow(&m.playlist, msg)
 	case tea.KeyMsg:
-		// if len(m.playlistNav) == 1 {
 		if msg.String() == "enter" {
-			// fmt.Println("doing something")
-			// time.Sleep(10 * time.Second)
-			// fmt.Println("finishing")
 			if len(m.playlistNav) == 1 {
 				playlist, err := m.controller.GetPlaylists(context.Background())
 				if err != nil {
@@ -186,27 +211,32 @@ func updatePlaylist(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 						}
 						m.playlistNav = append(m.playlistNav, makeList(gen...))
 						m.playlist = m.playlistNav[len(m.playlistNav)-1]
-						// fmt.Println(gen)
-
+						m.playlist.Title = "Playlist: " + p.Name
 					}
 				}
 
 			} else if len(m.playlistNav) == 2 {
-				fmt.Println("Playing.... ", m.playlist.SelectedItem().FilterValue())
-
 				res, _ := m.controller.Search(m.ctx, m.playlist.SelectedItem().FilterValue(), spotify.SearchTypeTrack)
 				track := res.Tracks.Tracks[0]
 				err := m.controller.PlayOpt(m.ctx, &spotify.PlayOptions{URIs: []spotify.URI{track.URI}})
 				if err != nil {
-					fmt.Println(err)
+					// amybe return if it fails
+					// fmt.Println(err)
 				}
+				m.nowPlaying = track
+				// m.curWindow = nowPlayingWindow
+				// m.playlistNav = append(m.playlistNav, makeList(gen...))
+				// m.playlist = m.playlistNav[len(m.playlistNav)-1]
+				m.playlist.Title = "Now playing: " + track.Name
+
 			}
 			// return m, nil
 		}
-		if msg.String() == "delete" {
+		if msg.String() == "2" {
 			m.playlistNav[len(m.playlistNav)-1] = list.Model{}
 			m.playlistNav = m.playlistNav[:len(m.playlistNav)-1]
 			m.playlist = m.playlistNav[len(m.playlistNav)-1]
+			m.playlist.Title = "Your playlists"
 
 		}
 
@@ -220,18 +250,7 @@ func updatePlaylist(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 }
 
 func updateControl(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
-	if len(m.controls.Items()) == 0 {
-		controls := []interface{}{
-			item{title: string(playCommand), desc: "resume playback"},
-			item{title: string(pauseCommand), desc: "pause playback"},
-			item{title: string(nextCommand), desc: "next track"},
-			item{title: string(prevCommand), desc: "previous track"},
-		}
-		m.controls = makeList(controls...)
-	}
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		resizeWindow(&m.controls, msg)
 	case tea.KeyMsg:
 		if msg.String() == "enter" {
 			err := ctl(context.Background(), m.controls.SelectedItem().FilterValue(), m)
@@ -275,9 +294,16 @@ func (m model) View() string {
 		view = m.playlist.View()
 	case controlWindow:
 		view = m.controls.View()
+	case nowPlayingWindow:
+		fmt.Println(m.nowPlaying.Name)
 	}
 	return docStyle.Render(view)
 }
+
+// func nowPlaying(song spotify.FullTrack) string {
+// 	return song.Name
+// }
+
 func makeList(items ...interface{}) list.Model {
 	output := []list.Item{}
 	for _, elem := range items {
@@ -305,7 +331,9 @@ func makeList(items ...interface{}) list.Model {
 	return list.NewModel(output, list.NewDefaultDelegate(), 0, 0)
 }
 
-func resizeWindow(list *list.Model, msg tea.WindowSizeMsg) {
+func resizeWindow(msg tea.WindowSizeMsg, lists ...*list.Model) {
 	top, right, bottom, left := docStyle.GetMargin()
-	list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
+	for _, list := range lists {
+		list.SetSize(msg.Width-left-right, msg.Height-top-bottom)
+	}
 }
