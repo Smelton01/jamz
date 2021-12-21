@@ -166,11 +166,6 @@ func updateDevice(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 			if err != nil {
 				panic(err)
 			}
-			// state, err := m.controller.GetState(m.ctx)
-			// if err != nil {
-			// 	panic(err)
-			// }
-			// play on selected device
 			for _, dev := range devs {
 				if m.devices.SelectedItem().FilterValue() == dev.Name {
 					err := m.controller.PlayOpt(m.ctx, &spotify.PlayOptions{DeviceID: &dev.ID})
@@ -224,9 +219,6 @@ func updatePlaylist(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 					// fmt.Println(err)
 				}
 				m.nowPlaying = track
-				// m.curWindow = nowPlayingWindow
-				// m.playlistNav = append(m.playlistNav, makeList(gen...))
-				// m.playlist = m.playlistNav[len(m.playlistNav)-1]
 				m.playlist.Title = "Now playing: " + track.Name
 
 			}
@@ -240,7 +232,6 @@ func updatePlaylist(msg tea.Msg, m model) (tea.Model, tea.Cmd) {
 
 		}
 
-		// }
 		var cmd tea.Cmd
 		m.playlist, cmd = m.playlist.Update(msg)
 
@@ -299,10 +290,6 @@ func (m model) View() string {
 	}
 	return docStyle.Render(view)
 }
-
-// func nowPlaying(song spotify.FullTrack) string {
-// 	return song.Name
-// }
 
 func makeList(items ...interface{}) list.Model {
 	output := []list.Item{}
